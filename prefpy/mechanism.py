@@ -3,6 +3,7 @@ Author: Kevin J. Hwang
 """
 import io
 import math
+import random
 import itertools
 from .preference import Preference
 from .profile import Profile
@@ -532,3 +533,104 @@ def getKendallTauScore(myResponse, otherResponse):
 
     #returns found value
     return kt
+
+class MechanismSTV(Mechanism):
+    """
+    The Single Transferable Vote Mechanism
+    """
+    
+    def __init__(self):
+        self.maximizeCandScore = True
+        self.seatsAvailable = 1
+
+    def getCandScoresMap(self, profile):
+        """
+        Returns a dictionary that associates integer representations of each candidate with their 
+        frequency as top ranked candidate or 0 if they were eliminated.
+
+        :ivar Profile profile: A Profile object that represents an election profile.
+        """
+        
+        # Currently, we expect the profile to contain complete ordering over candidates with no 
+        # ties.
+        elecType = profile.getElecType()
+        if elecType != "soc":
+            print("ERROR: unsupported election type")
+            exit()
+
+        #use the Drope quota: (votes cast / (seats available + 1)) + 1
+        winningQuota = (profile.numVoters / (self.seatsAvailable + 1)) + 1
+
+        candScoresMap = [{cand:0 for cand in profile.candMap}]
+
+        rankMaps = profile.getReverseRankMaps()
+        rankMapCounts = profile.getPreferenceCounts()
+        rankOffsets = [1 for x in rankMaps]
+
+        # ranoff for getting too little votes
+        eliminatedCandidates = set()
+        # already has winning num of votes
+        victoriousCandidates = set()
+        roundNum = 0
+        while(len(victoriousCandidates)!=self.seatsAvailable and 
+              profile.numVoters - len(victoriousCandidates) - len(eliminatedCandidates) > \
+                  self.seatsAvailable):
+            if roundNum >= len(candScoresMap):
+                candScoresMap.append({cand:0 for cand in profile.candMap})
+            #stores plurality scoring in candScoresMap
+            for rankIndex in range(len(rankMaps)):
+                rankMap = rankMaps[rankIndex]
+                cand = rankMap[rankOffsets[rankIndex]][0]
+                print(rankMap,cand,rankOffsets,rankIndex,"~~~")
+                candScoresMap[roundNum][cand] += rankMapCounts[rankIndex]
+
+            lowestScore = winningQuota
+            lowestCands = []
+            # go through all the cand and their scores
+            for cand,score in candScoresMap[roundNum].items():
+                # if cand got enough votes
+                if score >= winningQuota:
+                    victoriousCandidates.add(cand)
+                # if cand has new lowest num of votes
+                elif score < lowestScore:
+                    lowestScore = score
+                    lowestCands = [cand]
+                # if cand has the same lowest num of votes
+                elif score == lowestScore:
+                    lowestCands.append(cand)
+            
+            # lowest vote tie break #1 using forwards tie breaking
+            for roundCandScoreMap in candScoresMap[:-1]:
+                # no loser tie to break
+                if len(lowestCands) < 2:
+                    break;
+                lowestScore = roundCandScoreMap[lowestCands[0]]
+                evenLowerCands = []
+                # for each cand tied for last
+                for cand in lowestCands:
+                    # find their previous score and compare
+                    score = roundCandScoreMap[cand]
+                    if score < lowestScore:
+                        lowestScore = score
+                        lowestCands = [cand]
+                        # if cand has the same lowest num of votes
+                    elif score == lowestScore:
+                        lowestCands.append(cand)
+                # swap them to maintain lowestCands
+                lowestCands = evenLowerCands
+            
+            # if still not tie broken, randomly select loser 
+            loser = random.choice(lowestCands)
+            eliminatedCandidates.add(loser)
+            
+            # increment rankOffsets to skip over those cands already eliminated
+            for rankIndex in range(len(rankMaps)):
+                rankMap = rankMaps[rankIndex]
+                # while current cand in rankMap is eliminated or victorious, go to next cand
+                while((rankMap[rankOffsets[rankIndex]][0] in eliminatedCandidates or
+                      rankMap[rankOffsets[rankIndex]][0] in victoriousCandidates) and
+                      rankOffsets[rankIndex] < len(rankMap)):
+                    rankOffsets[rankIndex] += 1
+            
+            roundNum += 1
+        return candScoresMap[-1]
