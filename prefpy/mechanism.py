@@ -558,8 +558,7 @@ class MechanismSTV(Mechanism):
             print("ERROR: unsupported election type")
             exit()
 
-        #use the Drope quota: (votes cast / (seats available + 1)) + 1
-        winningQuota = (profile.numVoters / (self.seatsAvailable + 1)) + 1
+        winningQuota = self.getWinningQuota(profile)
 
         candScoresMap = [{cand:0 for cand in profile.candMap}]
 
@@ -585,48 +584,12 @@ class MechanismSTV(Mechanism):
                 cand = rankMap[rankOffsets[rankIndex]][0]
                 # print(rankMap,cand,rankOffsets,rankIndex,"~~~")
                 candScoresMap[roundNum][cand] += rankMapCounts[rankIndex]
-            
-            lowestScore = winningQuota
-            lowestCands = []
-            # go through all the cand and their scores
-            for cand,score in candScoresMap[roundNum].items():
-                # if cand got enough votes
-                if score >= winningQuota:
-                    victoriousCandidates.add(cand)
-                # if cand has new lowest num of votes
-                elif score < lowestScore:
-                    lowestScore = score
-                    lowestCands = [cand]
-                # if cand has the same lowest num of votes
-                elif score == lowestScore:
-                    lowestCands.append(cand)
 
+            lowestCands = self.lowestCandidates(profile, candScoresMap[roundNum], victoriousCandidates)
 
             print("plurality",roundNum,eliminatedCandidates,candScoresMap[roundNum],lowestCands)
 
-            
-            # lowest vote tie break #1 using forwards tie breaking
-            for roundCandScoreMap in candScoresMap[:-1]:
-                # no loser tie to break
-                if len(lowestCands) < 2:
-                    break;
-                lowestScore = roundCandScoreMap[lowestCands[0]]
-                evenLowerCands = []
-                # for each cand tied for last
-                for cand in lowestCands:
-                    # find their previous score and compare
-                    score = roundCandScoreMap[cand]
-                    if score < lowestScore:
-                        lowestScore = score
-                        evenLowerCands = [cand]
-                        # if cand has the same lowest num of votes
-                    elif score == lowestScore:
-                        evenLowerCands.append(cand)
-                # swap them to maintain lowestCands
-                lowestCands = evenLowerCands
-            
-            # if still not tie broken, randomly select loser 
-            loser = random.choice(lowestCands)
+            loser = self.forwardTieBreak(lowestCands, candScoresMap)
             eliminatedCandidates.add(loser)
 
             print("eliminates",roundNum,loser)
@@ -647,3 +610,68 @@ class MechanismSTV(Mechanism):
             if cand not in candScoresMap[-1]:
                 candScoresMap[-1][cand] = 0
         return candScoresMap[-1]
+
+    def getWinningQuota(self, profile):
+        """
+        Returns minimum number of votes needed to definitively win, using Drope quota
+
+        :ivar Profile profile: A Profile object that represents an election profile.
+        """
+        return (profile.numVoters / (self.seatsAvailable + 1)) + 1
+
+    def lowestCandidates(self, profile, candScores, victoriousCandidates):
+        """
+        Returns list of candidates with lowest plurality votes
+        Updates victoriousCandidates if needed
+
+        :ivar Profile profile: A Profile object that represents an election profile.
+        :ivar dict candScores: dictionary mapping candidate to score in current round
+        :ivar set victoriousCandidates: set of candidates that are automatically victorious
+        """
+        winningQuota = self.getWinningQuota(profile)
+        lowestScore = winningQuota
+        lowestCands = []
+        # go through all the cand and their scores
+        for cand,score in candScores.items():
+            # if cand got enough votes
+            if score >= winningQuota:
+                victoriousCandidates.add(cand)
+            # if cand has new lowest num of votes
+            elif score < lowestScore:
+                lowestScore = score
+                lowestCands = [cand]
+            # if cand has the same lowest num of votes
+            elif score == lowestScore:
+                lowestCands.append(cand)
+        return lowestCands
+
+    def forwardTieBreak(self, lowestCands, candScoresMap):
+        """
+        Runs forward tie breaking, putting eliminated candidates in eliminatedCandidates
+
+        :ivar list lowestCands list of tied lowest-ranking candidates
+        :ivar dict candScoresMap maps rounds to map of candidates to scores
+        :ivar set eliminatedCandidates
+        """
+
+        for roundCandScoreMap in candScoresMap[:-1]:
+            # no loser tie to break
+            if len(lowestCands) < 2:
+                break;
+            lowestScore = roundCandScoreMap[lowestCands[0]]
+            evenLowerCands = []
+            # for each cand tied for last
+            for cand in lowestCands:
+                # find their previous score and compare
+                score = roundCandScoreMap[cand]
+                if score < lowestScore:
+                    lowestScore = score
+                    evenLowerCands = [cand]
+                    # if cand has the same lowest num of votes
+                elif score == lowestScore:
+                    evenLowerCands.append(cand)
+            # swap them to maintain lowestCands
+            lowestCands = evenLowerCands
+
+        # if still not tie broken, randomly select loser
+        return random.choice(lowestCands)
