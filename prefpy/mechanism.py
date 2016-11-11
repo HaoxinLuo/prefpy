@@ -573,17 +573,19 @@ class MechanismSTV(Mechanism):
         victoriousCandidates = set()
         roundNum = 0
         while(len(victoriousCandidates)!=self.seatsAvailable and 
-              profile.numVoters - len(victoriousCandidates) - len(eliminatedCandidates) > \
+              profile.numCands - len(victoriousCandidates) - len(eliminatedCandidates) > \
                   self.seatsAvailable):
+            print("win&losers",roundNum,victoriousCandidates, eliminatedCandidates);
             if roundNum >= len(candScoresMap):
-                candScoresMap.append({cand:0 for cand in profile.candMap})
+                candScoresMap.append({cand:0 for cand in profile.candMap \
+                                      if cand not in eliminatedCandidates})
             #stores plurality scoring in candScoresMap
             for rankIndex in range(len(rankMaps)):
                 rankMap = rankMaps[rankIndex]
                 cand = rankMap[rankOffsets[rankIndex]][0]
-                print(rankMap,cand,rankOffsets,rankIndex,"~~~")
+                # print(rankMap,cand,rankOffsets,rankIndex,"~~~")
                 candScoresMap[roundNum][cand] += rankMapCounts[rankIndex]
-
+            
             lowestScore = winningQuota
             lowestCands = []
             # go through all the cand and their scores
@@ -598,6 +600,10 @@ class MechanismSTV(Mechanism):
                 # if cand has the same lowest num of votes
                 elif score == lowestScore:
                     lowestCands.append(cand)
+
+
+            print("plurality",roundNum,eliminatedCandidates,candScoresMap[roundNum],lowestCands)
+
             
             # lowest vote tie break #1 using forwards tie breaking
             for roundCandScoreMap in candScoresMap[:-1]:
@@ -612,16 +618,18 @@ class MechanismSTV(Mechanism):
                     score = roundCandScoreMap[cand]
                     if score < lowestScore:
                         lowestScore = score
-                        lowestCands = [cand]
+                        evenLowerCands = [cand]
                         # if cand has the same lowest num of votes
                     elif score == lowestScore:
-                        lowestCands.append(cand)
+                        evenLowerCands.append(cand)
                 # swap them to maintain lowestCands
                 lowestCands = evenLowerCands
             
             # if still not tie broken, randomly select loser 
             loser = random.choice(lowestCands)
             eliminatedCandidates.add(loser)
+
+            print("eliminates",roundNum,loser)
             
             # increment rankOffsets to skip over those cands already eliminated
             for rankIndex in range(len(rankMaps)):
@@ -633,4 +641,9 @@ class MechanismSTV(Mechanism):
                     rankOffsets[rankIndex] += 1
             
             roundNum += 1
+        
+        #put eliminated candidates back in with 0 votes???
+        for cand in eliminatedCandidates:
+            if cand not in candScoresMap[-1]:
+                candScoresMap[-1][cand] = 0
         return candScoresMap[-1]
