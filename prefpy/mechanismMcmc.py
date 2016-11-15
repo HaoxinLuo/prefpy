@@ -7,9 +7,9 @@ import itertools
 import copy
 import random
 import json
-from .profile import Profile
-from .preference import Preference
-from .mechanism import Mechanism
+from profile import Profile
+from preference import Preference
+from mechanism import Mechanism
 
 SAMPLESFILEMETADATALINECOUNT = 3
 
