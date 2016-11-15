@@ -52,6 +52,7 @@ class MechanismSTV2(Mechanism):
         print(rankingCount)
 
         winners, losers = self.getWinLoseCandidates(candScoreMap, winningQuota)
-        while(len(winners) < self.seatsAvailable and len(losers) + 2 < numCandidates):
+        while(len(winners) < self.seatsAvailable and \
+              len(winners) + len(losers) + 2 < numCandidates):
             pass
         return candScoreMap
