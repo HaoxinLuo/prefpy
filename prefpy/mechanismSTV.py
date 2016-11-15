@@ -1,7 +1,4 @@
-import io
-import math
 import random
-import itertools
 from .mechanism import Mechanism
 from .preference import Preference
 from .profile import Profile
@@ -26,7 +23,7 @@ class MechanismSTV(Mechanism):
         # Currently, we expect the profile to contain complete ordering over candidates with no 
         # ties.
         elecType = profile.getElecType()
-        if elecType != "soc":
+        if elecType != "soc" and elecType != "soi":
             print("ERROR: unsupported election type")
             exit()
 
