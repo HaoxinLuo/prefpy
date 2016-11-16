@@ -32,7 +32,18 @@ def electionFileToProfile(file):
         preferences.append(Preference(wmg, ranking[1]))
     return Profile(candMap, preferences)
             
-profile = electionFileToProfile(sys.argv[1])
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python3 -m prefpy.mechanismSTVRunner tests/<any test file>\n",
+              ''' input file follows the election data format described at (http://www.preflib.org/data/format.php#election-data):
+    * <number of candidates>
+    * <candidate number; e.g. 1>,<candidate name; e.g. apple>
+    * ... //until all candidates listed
+    * <total number of voters>,<sum of vote count;usually same as total number of votes>,<number of unique rankings>
+    * <number of votes with this ranking>,<ranking;e.g. 1,2,3,4>
+    * ... //until all unique rankings are listed''')
+        exit()
+    profile = electionFileToProfile(sys.argv[1])
 
-stv = mechanismSTV.MechanismSTV()
-print(stv.getWinners(profile))
+    stv = mechanismSTV.MechanismSTV()
+    print(stv.getWinners(profile))
