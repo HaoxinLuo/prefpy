@@ -1,7 +1,6 @@
 import sys
 from prefpy import io
 from prefpy import mechanismSTV
-from prefpy import mechanismSTV2
 from .preference import Preference
 from .profile import Profile
 
@@ -35,14 +34,5 @@ def electionFileToProfile(file):
             
 profile = electionFileToProfile(sys.argv[1])
 
-# stv = mechanismSTV.MechanismSTV()
-# print(stv.getWinners(profile))
-# print(stv.getCandScoresMap(profile))
-
-stv = mechanismSTV2.MechanismSTV2()
+stv = mechanismSTV.MechanismSTV()
 print(stv.getWinners(profile))
-# print(stv.getCandScoresMap(profile))
-
-
-# stvMech = mechanism.mechanismSTV()
-# scores = stvMech.getCandScoresMap(
