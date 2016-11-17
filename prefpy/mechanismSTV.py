@@ -109,55 +109,7 @@ class MechanismSTV(Mechanism):
                 losers.add(cand)
         return winners, losers
 
-    def breakLoserTie(self, losers, deltaCandScores, profile):
-        """
-        Returns one candidate to be eliminated by foward tie breaking.
 
-        :rtype int loser: the candidate to be eliminated this round.
-
-        :ivar set<int> losers: A set of candidates who are tied for being eliminated.
-        :ivar list<dict<int,int>> deltaCandScores: A list of the score change for 
-            each candidate each round. Candidates whose score did not change for a 
-            round would not appear in the dictionary for that round.
-        :ivar Profile profile: A Profile object that represents an election profile.
-        """
-
-        curCandScores = self.getInitialCandMaps(profile)[0]
-        curRound = 0
-        while(len(losers)>1 and curRound < len(deltaCandScores)):
-            lowestScore = -1
-            newLosers = set()
-            for loser in losers:
-                score = curCandScores[loser]
-                if score < lowestScore or lowestScore == -1:
-                    lowestScore = score
-                    newLosers = {loser}
-                elif score == lowestScore:
-                    newLosers.add(loser)
-            losers = newLosers
-            
-            for cand in losers:
-                curCandScores[cand] += deltaCandScores[curRound][cand]
-            curRound += 1
-        return random.choice(list(losers))
-        
-    def breakLoserTieBackwards(self, losers, deltaCandScores, profile):
-        curRound = len(deltaCandScores) - 1
-        while(len(losers) > 1 and curRound >= 0):
-            highestChange = -1
-            newLosers = set()
-            for loser in losers:
-                change = 0
-                if loser in deltaCandScores[curRound]:
-                    change = deltaCandScores[curRound][loser] 
-                if change > highestChange or highestChange == -1:
-                    highestChange = change
-                    newLosers = {loser}
-                elif change == highestChange:
-                    newLosers.add(loser)
-            losers = newLosers
-            curRound -= 1
-        return random.choice(list(losers))
 
     def reallocLoserVotes(self, candScoreMap, candPreferenceMap, rankingCount, 
                           rankingOffset, loser, noMoreVotesHere, deltaCandScores):
@@ -209,6 +161,9 @@ class MechanismSTV(Mechanism):
         candidate with their frequency as top ranked candidate or 0 if they were
         eliminated.
 
+        This function assumes that breakLoserTie(self, losers, deltaCandScores, profile)
+        is implemented for the child MechanismSTV class.
+
         :ivar Profile profile: A Profile object that represents an election profile.
         """
 
@@ -230,7 +185,7 @@ class MechanismSTV(Mechanism):
         while(len(victoriousCands) < self.seatsAvailable and \
               len(victoriousCands) + len(eliminatedCands) + 1 < numCandidates):
             winners, losers = self.getWinLoseCandidates(candScoreMap, winningQuota)
-            loser = self.breakLoserTieBackwards(losers, deltaCandScores, profile)
+            loser = self.breakLoserTie(losers, deltaCandScores, profile)
             victoriousCands = victoriousCands | winners
             eliminatedCands = eliminatedCands | {loser}
             print('[round %d]'%roundNum,'prefMap:-',candPreferenceMap)
@@ -241,3 +196,72 @@ class MechanismSTV(Mechanism):
                                    victoriousCands | eliminatedCands, deltaCandScores)
             roundNum+= 1
         return candScoreMap
+
+class MechanismSTVForward(MechanismSTV):
+    """
+    The Single Transferable Vote Mechanism with Forward Tie Breaking
+    """
+
+    def __init__(self):
+        self.maximizeCandScore = True
+        self.seatsAvailable = 1
+
+   def breakLoserTie(self, losers, deltaCandScores, profile):
+        """
+        Returns one candidate to be eliminated by foward tie breaking.
+
+        :rtype int loser: the candidate to be eliminated this round.
+
+        :ivar set<int> losers: A set of candidates who are tied for being eliminated.
+        :ivar list<dict<int,int>> deltaCandScores: A list of the score change for 
+            each candidate each round. Candidates whose score did not change for a 
+            round would not appear in the dictionary for that round.
+        :ivar Profile profile: A Profile object that represents an election profile.
+        """
+
+        curCandScores = self.getInitialCandMaps(profile)[0]
+        curRound = 0
+        while(len(losers)>1 and curRound < len(deltaCandScores)):
+            lowestScore = -1
+            newLosers = set()
+            for loser in losers:
+                score = curCandScores[loser]
+                if score < lowestScore or lowestScore == -1:
+                    lowestScore = score
+                    newLosers = {loser}
+                elif score == lowestScore:
+                    newLosers.add(loser)
+            losers = newLosers
+            
+            for cand in losers:
+                curCandScores[cand] += deltaCandScores[curRound][cand]
+            curRound += 1
+        return random.choice(list(losers))
+
+class MechanismSTVBackward(MechanismSTV):
+    """
+    The Single Transferable Vote Mechanism with Backwards Tie Breaking
+    """
+
+    def __init__(self):
+        self.maximizeCandScore = True
+        self.seatsAvailable = 1
+
+    def breakLoserTie(self, losers, deltaCandScores, profile):
+        curRound = len(deltaCandScores) - 1
+        while(len(losers) > 1 and curRound >= 0):
+            highestChange = -1
+            newLosers = set()
+            for loser in losers:
+                change = 0
+                if loser in deltaCandScores[curRound]:
+                    change = deltaCandScores[curRound][loser] 
+                if change > highestChange or highestChange == -1:
+                    highestChange = change
+                    newLosers = {loser}
+                elif change == highestChange:
+                    newLosers.add(loser)
+            losers = newLosers
+            curRound -= 1
+        return random.choice(list(losers))
+

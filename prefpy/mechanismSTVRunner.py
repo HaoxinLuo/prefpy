@@ -45,5 +45,7 @@ if __name__ == "__main__":
         exit()
     profile = electionFileToProfile(sys.argv[1])
 
-    stv = mechanismSTV.MechanismSTV()
+    stv = mechanismSTVForward.MechanismSTVForward()
+    print(stv.getWinners(profile))
+    stv = mechanismSTVBackward.MechanismSTVBackward()
     print(stv.getWinners(profile))
