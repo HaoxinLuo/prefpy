@@ -1,0 +1,5 @@
+Make test cases with:
+1. ties such that foward tie breaking goes to the curRound - 1 round
+2. ties such that backward tie breaking goes to the first round
+3. ties where the loser's vote will be divided and given to two diff cands
+4. the 1st and 3rd test case, and 2nd and 3rd test case 
