@@ -111,7 +111,7 @@ class MechanismSTV(Mechanism):
 
     def breakLoserTie(self, losers, deltaCandScores, profile):
         """
-        Returns one candidate to be eliminated.
+        Returns one candidate to be eliminated by foward tie breaking.
 
         :rtype int loser: the candidate to be eliminated this round.
 
@@ -136,10 +136,29 @@ class MechanismSTV(Mechanism):
                     newLosers.add(loser)
             losers = newLosers
             
-            for cand in deltaCandScores[curRound]:
+            for cand in losers:
                 curCandScores[cand] += deltaCandScores[curRound][cand]
+            curRound += 1
         return random.choice(list(losers))
         
+    def breakLoserTieBackwards(self, losers, deltaCandScores, profile):
+        curRound = len(deltaCandScores) - 1
+        while(len(losers) > 1 and curRound >= 0):
+            highestChange = -1
+            newLosers = set()
+            for loser in losers:
+                change = 0
+                if loser in deltaCandScores[curRound]:
+                    change = deltaCandScores[curRound][loser] 
+                if change > highestChange or highestChange == -1:
+                    highestChange = change
+                    newLosers = {loser}
+                elif change == highestChange:
+                    newLosers.add(loser)
+            losers = newLosers
+            curRound -= 1
+        return random.choice(list(losers))
+
     def reallocLoserVotes(self, candScoreMap, candPreferenceMap, rankingCount, 
                           rankingOffset, loser, noMoreVotesHere, deltaCandScores):
         """
@@ -211,7 +230,7 @@ class MechanismSTV(Mechanism):
         while(len(victoriousCands) < self.seatsAvailable and \
               len(victoriousCands) + len(eliminatedCands) + 1 < numCandidates):
             winners, losers = self.getWinLoseCandidates(candScoreMap, winningQuota)
-            loser = self.breakLoserTie(losers, deltaCandScores, profile)
+            loser = self.breakLoserTieBackwards(losers, deltaCandScores, profile)
             victoriousCands = victoriousCands | winners
             eliminatedCands = eliminatedCands | {loser}
             print('[round %d]'%roundNum,'prefMap:-',candPreferenceMap)
