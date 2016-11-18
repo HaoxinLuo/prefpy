@@ -5,7 +5,9 @@ from .profile import Profile
 
 class MechanismSTV(Mechanism):
     """
-    The Single Transferable Vote Mechanism
+    The Single Transferable Vote Mechanism. This class is the parent class for
+    several mechanisms and cannot be constructed directly. All child classes are
+    expected to implement getScoringVector() method.
     """
 
     def __init__(self):
@@ -199,7 +201,7 @@ class MechanismSTV(Mechanism):
 
 class MechanismSTVForward(MechanismSTV):
     """
-    The Single Transferable Vote Mechanism with Forward Tie Breaking
+    The Single Transferable Vote Mechanism with Forward Tie Breaking.
     """
 
     def __init__(self):
@@ -240,7 +242,7 @@ class MechanismSTVForward(MechanismSTV):
 
 class MechanismSTVBackward(MechanismSTV):
     """
-    The Single Transferable Vote Mechanism with Backwards Tie Breaking
+    The Single Transferable Vote Mechanism with Backwards Tie Breaking.
     """
 
     def __init__(self):
@@ -248,6 +250,17 @@ class MechanismSTVBackward(MechanismSTV):
         self.seatsAvailable = 1
 
     def breakLoserTie(self, losers, deltaCandScores, profile):
+        """
+        Returns one candidate to be eliminated by backwards tie breaking.
+
+        :rtype int loser: the candidate to be eliminated this round.
+
+        :ivar set<int> losers: A set of candidates who are tied for being eliminated.
+        :ivar list<dict<int,int>> deltaCandScores: A list of the score change for 
+            each candidate each round. Candidates whose score did not change for a 
+            round would not appear in the dictionary for that round.
+        :ivar Profile profile: A Profile object that represents an election profile.
+        """
         curRound = len(deltaCandScores) - 1
         while(len(losers) > 1 and curRound >= 0):
             highestChange = -1
@@ -265,3 +278,124 @@ class MechanismSTVBackward(MechanismSTV):
             curRound -= 1
         return random.choice(list(losers))
 
+class MechanismSTVPosTieBreak(MechanismSTV):
+    """
+    The Single Transferable Vote Mechanism with Positional Tie Breaking.
+    This is the parent class for several other mechanisms but can be constructed
+    directly.  The child classes are expected to implement the getScoringVector()
+    method.
+
+    :ivar list<int> scoringVector: A list of integers (or floats that give the scores assigned to 
+    each position a ranking from first to last.
+    """
+
+    def __init__(self,scoringVector):
+        self.maximizeCandScore = True
+        self.seatsAvailable = 1
+        self.scoringVector = scoringVector
+
+    def getScoringVector(self,profile):
+        """
+        Returns the scoring vector. This function is called by breakLoserTie().
+
+        :ivar Profile profile: A Profile object that represents an election profile.
+        """
+        if len(self.scoringVector) != profile.numCands:
+            print("ERROR: scoring vector is not the correct length")
+            exit()
+        return self.scoringVector
+
+
+    def breakLoserTie(self, losers, deltaCandScores, profile):
+        """
+        Returns one candiate to be eliminated by positional tie breaking.
+
+        :rtype int loser: the candidate to be eliminated this round.
+
+        :ivar set<int> losers: A set of candidates who are tied for being eliminated.
+        :ivar list<dict<int,int>> deltaCandScores: A list of the score change for 
+            each candidate each round. Candidates whose score did not change for a 
+            round would not appear in the dictionary for that round.
+        :ivar Profile profile: A Profile object that represents an election profile.
+        """
+
+        # Initialize our dictionary so all candidate have a score of zero.
+        loserScoresMap = dict()
+        for loser in losers:
+            loserScoresMap[loser] = 0
+        rankMaps = profile.getRankMaps()
+        rankMapCounts = profile.getPreferenceCounts()
+        scoringVector = self.getScoringVector(profile)
+        # Go through the rankMaps of the profile and increment each candidates score appropriately
+        for i in range(0, len(rankMaps)):
+            rankMap = rankMaps[i]
+            rankMapCount = rankMapCounts[i]
+            for cand in rankMap.keys():
+                if cand in losers:
+                    loserScoresMap[cand] += scoringVector[rankMap[cand]-1]*rankMapCount
+        #get a starting value for the lowest score, store losers with that value
+        sampleLoser = losers.pop()
+        loserScore = loserScoresMap[sampleLoser]
+        actualLosers.add(sampleLoser)
+        #find the lowest scored losers
+        for loser in losers:
+            currentScore = loserScoresMap[loser]
+            if currentScore < loserScore:
+                loserScore = currentScore
+                actualLosers.clear()
+                actualLosers.add(loser)
+            else if currentScore == loserScore:
+                actualLosers.add(loser)
+        return random.choice(list(actualLosers))
+
+class MechanismSTVBorda(MechanismSTVPosTieBreak):
+    """
+    The Single Transferable Vote with Borda tie breaking mechanism.
+    This inherits from the STV with positional tie breaking mechanism.
+    """
+
+    def __init__(self):
+        self.maximizeCandScore = True
+        self.seatsAvailable = 1
+
+    def getScoringVector(self, profile):
+        """
+        Echos the function of the same name from MechanismBorda.
+        Returns the scoring vector [m-1,m-2,m-3,...,0] where m is the number of candidates in the
+election profile. This function is called by breakLoserTie() which is implemented in the
+parent class.
+        
+        :ivar Profile profile: A Profile object that represents an election profile.
+        """
+        scoringVector = []
+        score = profile.numCands-1
+        for i in range(0,profile.numCands):
+            scoringVector.append(score)
+            score -= 1
+        return scoringVector
+
+class MechanismSTVCoombs(MechanismSTVPosTieBreak):
+    """
+    The Single Transferable Vote with Coombs tie breaking mechanism.
+    This inherits from the STV with positional tie breaking mechanism.
+    """
+
+    def __init__(self):
+        self.maximizeCandScore = True
+        self.seatsAvailable = 1
+
+    def getScoringVector(self, profile):
+        """
+        Echos the function of the same name from MechanismVeto.
+        Returns the scoring vector [1,1,1,...,0]. This function is called by breakLoserTie()
+        which is implemented in the parent class.
+
+        :ivar Profile profile: a Profile object that represents an election profile.
+        """
+        numTiers = len(set(profile.getRankMaps()[0].values()))
+        scoringVector = []
+        for i in range(0, numTiers - 1):
+            scoringVector.append(1)
+        for i in range(numTiers - 1, profile.numCands):
+            scoringVector.append(0)
+        return scoringVector

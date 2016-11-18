@@ -49,3 +49,7 @@ if __name__ == "__main__":
     print(stv.getWinners(profile))
     stv = mechanismSTVBackward.MechanismSTVBackward()
     print(stv.getWinners(profile))
+    stv = mechanismSTVBorda.MechanismSTVBorda()
+    print(stv.getWinners(profile))
+    stv = mechanismSTVCoombs.MechanismSTVCoombs()
+    print(stv.getWinners(profile))
