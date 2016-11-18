@@ -238,6 +238,8 @@ class MechanismSTVForward(MechanismSTV):
             losers = newLosers
 
             for cand in losers:
+                if cand not in deltaCandScores[curRound]:
+                    continue
                 curCandScores[cand] += deltaCandScores[curRound][cand]
             curRound += 1
         return random.choice(list(losers))
