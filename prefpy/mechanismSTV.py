@@ -16,9 +16,9 @@ class MechanismSTV(Mechanism):
 
     def getWinningQuota(self, profile):
         """
-        Returns an integer that is the minimum number of votes needed to 
+        Returns an integer that is the minimum number of votes needed to
         definitively win using Droop quota
-        
+
         :ivar Profile profile: A Profile object that represents an election profile.
         """
 
@@ -28,13 +28,13 @@ class MechanismSTV(Mechanism):
         """
         Returns a tuple of tuples that represents the ranking where the first inner
         tuple contains candidates that are ranked number 1 in original ranking and
-        so on for each following inner tuple. e.g. {{4,}, {1,}, {3,}, {2,}} is a 
+        so on for each following inner tuple. e.g. {{4,}, {1,}, {3,}, {2,}} is a
         ranking where candidates are ranked in the order 4 > 1 > 3 > 2.
-        
+
         :rtype tuple<tuple<int>>: will referred to as tupleRanking type.
-        
-        :ivar dict<int,list<int>> ranking: A mapping of ranking position number to 
-            list of candidates ranked at that position. e.g. {1:[2,3]} means 
+
+        :ivar dict<int,list<int>> ranking: A mapping of ranking position number to
+            list of candidates ranked at that position. e.g. {1:[2,3]} means
             candidates 2 and 3 are both ranked number 1 in the ranking.
         """
 
@@ -42,12 +42,12 @@ class MechanismSTV(Mechanism):
 
     def getInitialCandMaps(self, profile):
         """
-        Returns a multi-part representation of the election profile referenced by 
+        Returns a multi-part representation of the election profile referenced by
         profile.
 
-        .. note:: tupleRanking is equal to tuple<tuple<int>> as returned by 
+        .. note:: tupleRanking is equal to tuple<tuple<int>> as returned by
             convRankingToTuple.
-        :rtype dict<int,int> candScoreMap: A mapping of each candidate to their 
+        :rtype dict<int,int> candScoreMap: A mapping of each candidate to their
             score, which starts out as the number of rankings with this candidate
             ranked first, or 0 if no rankings start out supporting this canddiate.
         :rtype dict<int,list<tupleRanking>> candPreferenceMap: A mapping of each
@@ -74,7 +74,7 @@ class MechanismSTV(Mechanism):
             candPreferenceMap[cand] = []
         rankingOffset = {}
         rankingCount = {}
-        
+
         for ranking,count in zip(rankMaps,rankMapCounts):
             tupleRanking = self.convRankingToTuple(ranking)
             rankingCount[tupleRanking] = count
@@ -83,7 +83,7 @@ class MechanismSTV(Mechanism):
             candPreferenceMap[tupleRanking[0][0]].append(tupleRanking)
             if tupleRanking not in rankingOffset:
                 rankingOffset[tupleRanking] = 0
-        
+
         return candScoreMap, candPreferenceMap, rankingCount, rankingOffset
 
     def getWinLoseCandidates(self, candScoreMap, winningQuota):
@@ -113,7 +113,7 @@ class MechanismSTV(Mechanism):
 
 
 
-    def reallocLoserVotes(self, candScoreMap, candPreferenceMap, rankingCount, 
+    def reallocLoserVotes(self, candScoreMap, candPreferenceMap, rankingCount,
                           rankingOffset, loser, noMoreVotesHere, deltaCandScores):
         """
         Modifies rankingOffset so that the rankings supporting the just eliminated
@@ -124,7 +124,7 @@ class MechanismSTV(Mechanism):
         supports no candidate is removed from all lists in candPreferenceMap, but
         not from rankingOffset, and rankingCount.
 
-        .. note:: tupleRanking is equal to tuple<tuple<int>> as returned by 
+        .. note:: tupleRanking is equal to tuple<tuple<int>> as returned by
             convRankingToTuple.
         :ivar dict<int,int> candScoreMap: A mapping of candidates to their score.
         :ivar dict<int,list<tupleRanking>> candPreferenceMap: A mapping of each
@@ -159,7 +159,7 @@ class MechanismSTV(Mechanism):
 
     def getCandScoresMap(self, profile):
         """
-        Returns a dictionary that associates integer representations of each 
+        Returns a dictionary that associates integer representations of each
         candidate with their frequency as top ranked candidate or 0 if they were
         eliminated.
 
@@ -193,8 +193,8 @@ class MechanismSTV(Mechanism):
             print('[round %d]'%roundNum,'prefMap:-',candPreferenceMap)
             print('[round %d]'%roundNum,'scores:-',candScoreMap,'loser:-',loser,
                   'w&l:-',victoriousCands, eliminatedCands)
-            self.reallocLoserVotes(candScoreMap, candPreferenceMap, rankingCount, 
-                                   rankingOffset,loser, 
+            self.reallocLoserVotes(candScoreMap, candPreferenceMap, rankingCount, \
+                                   rankingOffset,loser, \
                                    victoriousCands | eliminatedCands, deltaCandScores)
             roundNum+= 1
         return candScoreMap
@@ -208,15 +208,15 @@ class MechanismSTVForward(MechanismSTV):
         self.maximizeCandScore = True
         self.seatsAvailable = 1
 
-   def breakLoserTie(self, losers, deltaCandScores, profile):
+    def breakLoserTie(self, losers, deltaCandScores, profile):
         """
         Returns one candidate to be eliminated by foward tie breaking.
 
         :rtype int loser: the candidate to be eliminated this round.
 
         :ivar set<int> losers: A set of candidates who are tied for being eliminated.
-        :ivar list<dict<int,int>> deltaCandScores: A list of the score change for 
-            each candidate each round. Candidates whose score did not change for a 
+        :ivar list<dict<int,int>> deltaCandScores: A list of the score change for
+            each candidate each round. Candidates whose score did not change for a
             round would not appear in the dictionary for that round.
         :ivar Profile profile: A Profile object that represents an election profile.
         """
@@ -234,7 +234,7 @@ class MechanismSTVForward(MechanismSTV):
                 elif score == lowestScore:
                     newLosers.add(loser)
             losers = newLosers
-            
+
             for cand in losers:
                 curCandScores[cand] += deltaCandScores[curRound][cand]
             curRound += 1
@@ -256,8 +256,8 @@ class MechanismSTVBackward(MechanismSTV):
         :rtype int loser: the candidate to be eliminated this round.
 
         :ivar set<int> losers: A set of candidates who are tied for being eliminated.
-        :ivar list<dict<int,int>> deltaCandScores: A list of the score change for 
-            each candidate each round. Candidates whose score did not change for a 
+        :ivar list<dict<int,int>> deltaCandScores: A list of the score change for
+            each candidate each round. Candidates whose score did not change for a
             round would not appear in the dictionary for that round.
         :ivar Profile profile: A Profile object that represents an election profile.
         """
@@ -268,7 +268,7 @@ class MechanismSTVBackward(MechanismSTV):
             for loser in losers:
                 change = 0
                 if loser in deltaCandScores[curRound]:
-                    change = deltaCandScores[curRound][loser] 
+                    change = deltaCandScores[curRound][loser]
                 if change > highestChange or highestChange == -1:
                     highestChange = change
                     newLosers = {loser}
@@ -285,7 +285,7 @@ class MechanismSTVPosTieBreak(MechanismSTV):
     directly.  The child classes are expected to implement the getScoringVector()
     method.
 
-    :ivar list<int> scoringVector: A list of integers (or floats that give the scores assigned to 
+    :ivar list<int> scoringVector: A list of integers (or floats that give the scores assigned to
     each position a ranking from first to last.
     """
 
@@ -313,8 +313,8 @@ class MechanismSTVPosTieBreak(MechanismSTV):
         :rtype int loser: the candidate to be eliminated this round.
 
         :ivar set<int> losers: A set of candidates who are tied for being eliminated.
-        :ivar list<dict<int,int>> deltaCandScores: A list of the score change for 
-            each candidate each round. Candidates whose score did not change for a 
+        :ivar list<dict<int,int>> deltaCandScores: A list of the score change for
+            each candidate each round. Candidates whose score did not change for a
             round would not appear in the dictionary for that round.
         :ivar Profile profile: A Profile object that represents an election profile.
         """
@@ -336,6 +336,7 @@ class MechanismSTVPosTieBreak(MechanismSTV):
         #get a starting value for the lowest score, store losers with that value
         sampleLoser = losers.pop()
         loserScore = loserScoresMap[sampleLoser]
+        actualLosers = set()
         actualLosers.add(sampleLoser)
         #find the lowest scored losers
         for loser in losers:
@@ -344,7 +345,7 @@ class MechanismSTVPosTieBreak(MechanismSTV):
                 loserScore = currentScore
                 actualLosers.clear()
                 actualLosers.add(loser)
-            else if currentScore == loserScore:
+            elif currentScore == loserScore:
                 actualLosers.add(loser)
         return random.choice(list(actualLosers))
 
@@ -364,7 +365,7 @@ class MechanismSTVBorda(MechanismSTVPosTieBreak):
         Returns the scoring vector [m-1,m-2,m-3,...,0] where m is the number of candidates in the
 election profile. This function is called by breakLoserTie() which is implemented in the
 parent class.
-        
+
         :ivar Profile profile: A Profile object that represents an election profile.
         """
         scoringVector = []
