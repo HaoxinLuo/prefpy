@@ -104,7 +104,7 @@ class MechanismSTV(Mechanism):
         for cand,score in candScoreMap.items():
             if score >= winningQuota:
                 winners.add(cand)
-            elif score < lowestScore and score != 0:
+            elif score < lowestScore and score > 0:
                 lowestScore = score
                 losers = set([cand])
             elif score == lowestScore:
@@ -186,6 +186,8 @@ class MechanismSTV(Mechanism):
         victoriousCands, eliminatedCands = set(), set()
         while(len(victoriousCands) < self.seatsAvailable and \
               len(victoriousCands) + len(eliminatedCands) + 1 < numCandidates):
+            for cand in eliminatedCands:
+                candScoreMap[cand] -= 1
             winners, losers = self.getWinLoseCandidates(candScoreMap, winningQuota)
             loser = self.breakLoserTie(losers, deltaCandScores, profile)
             victoriousCands = victoriousCands | winners
