@@ -1,4 +1,5 @@
 import random
+from pprint import pprint
 from .mechanism import Mechanism
 from .preference import Preference
 from .profile import Profile
@@ -40,7 +41,7 @@ class MechanismSTV(Mechanism):
 
         return tuple(tuple(ranking[k+1]) for k in range(0,len(ranking)))
 
-    def getInitialCandMaps(self, profile):
+    def getCandMaps(self, profile, rankMaps, rankMapCounts):
         """
         Returns a multi-part representation of the election profile referenced by
         profile.
@@ -63,11 +64,8 @@ class MechanismSTV(Mechanism):
         :ivar Profile profile: A Profile object that represents an election profile.
         """
 
-        allCands = list(profile.candMap.keys())
-        rankMaps = profile.getReverseRankMaps()
-        rankMapCounts = profile.getPreferenceCounts()
-
         # initialize all cands to have 0 score and [] supporting rankings
+        allCands = list(profile.candMap.keys())
         candScoreMap, candPreferenceMap = {},{}
         for cand in allCands:
             candScoreMap[cand] = 0
@@ -86,76 +84,17 @@ class MechanismSTV(Mechanism):
 
         return candScoreMap, candPreferenceMap, rankingCount, rankingOffset
 
-    def getWinLoseCandidates(self, candScoreMap, winningQuota):
+    def getInitialRankMaps(self, profile):
         """
-        Returns candidates who gained at least winningQuota worth of votes and
-        those with the least positive number of votes.
+        Returns a multi-part representation of the election profile referenced by
+        profile.
 
-        :rtype set<int> winners: The set of candidates who has winningQuota worth
-            of votes this round.
-        :rtype set<int> losers: The set of candidates who has the least positive
-            amount of votes.
-
-        :ivar dict<int, int> candScoremap: A mapping of candidates to their score.
-        :ivar int winningQuota: the amount of votes needed to win a seat
+        :ivar Profile profile: A Profile object that represents an election profile.
         """
-        winners, losers = set(), set()
-        lowestScore = winningQuota
-        for cand,score in candScoreMap.items():
-            if score >= winningQuota:
-                winners.add(cand)
-            elif score < lowestScore and score > 0:
-                lowestScore = score
-                losers = set([cand])
-            elif score == lowestScore:
-                losers.add(cand)
-        return winners, losers
-
-
-
-    def reallocLoserVotes(self, candScoreMap, candPreferenceMap, rankingCount,
-                          rankingOffset, loser, noMoreVotesHere, deltaCandScores):
-        """
-        Modifies rankingOffset so that the rankings supporting the just eliminated
-        candidate will support the next non-winning-or-eliminated candidate, or
-        no one if offset reaches the end of the ranking. Also updates candScoreMap,
-        candPreferenceMap, and deltaCandScores to reflect the new scores, and
-        supporting rankings due to one candidate being eliminated. A ranking that
-        supports no candidate is removed from all lists in candPreferenceMap, but
-        not from rankingOffset, and rankingCount.
-
-        .. note:: tupleRanking is equal to tuple<tuple<int>> as returned by
-            convRankingToTuple.
-        :ivar dict<int,int> candScoreMap: A mapping of candidates to their score.
-        :ivar dict<int,list<tupleRanking>> candPreferenceMap: A mapping of each
-            candidate to a list of supporting rankings in tuple form
-        :ivar dict<tupleRanking, int> rankingCount: A mapping of rankings in tuple
-            form to their corresponding count as given by profile.
-        :ivar dict<tupleRanking, int> rankingOffset: A mapping of rankings in tuple
-            form to the their own offset to the currently supproted candidate.
-        """
-        deltaCandScore = {}
-        for ranking in candPreferenceMap[loser]:
-            curOffset = rankingOffset[ranking]
-            oldCand = ranking[curOffset][0]
-            while(curOffset < len(ranking) and \
-                  ranking[curOffset][0] in noMoreVotesHere):
-                curOffset += 1
-            rankingOffset[ranking] = curOffset
-            if curOffset < len(ranking):
-                newCand = ranking[curOffset][0]
-                candPreferenceMap[newCand].append(ranking)
-                candScoreMap[newCand] += rankingCount[ranking]
-                if newCand not in deltaCandScore:
-                    deltaCandScore[newCand] = 0
-                deltaCandScore[newCand] += rankingCount[ranking]
-            candScoreMap[oldCand] -= rankingCount[ranking]
-            if oldCand not in deltaCandScore:
-                deltaCandScore[oldCand] = 0
-            deltaCandScore[oldCand] -= rankingCount[ranking]
-        candPreferenceMap[loser] = []
-        deltaCandScores.append(deltaCandScore)
-
+        allCands = list(profile.candMap.keys())
+        rankMaps = profile.getReverseRankMaps()
+        rankMapCounts = profile.getPreferenceCounts()
+        return rankMaps, rankMapCounts
 
     def getCandScoresMap(self, profile):
         """
@@ -178,229 +117,65 @@ class MechanismSTV(Mechanism):
 
         winningQuota = self.getWinningQuota(profile)
         numCandidates = profile.numCands
-        candScoreMap, candPreferenceMap, rankingCount, rankingOffset = \
-            self.getInitialCandMaps(profile)
+        rankMaps, rankMapCounts = self.getInitialRankMaps(profile)
+        # candScoreMap, candPreferenceMap, rankingCount, rankingOffset = self.getCandMaps(profile, rankMaps, rankMapCounts)
+        rankingOffset = [1 for i in rankMapCounts]
         roundNum = 0
 
-        deltaCandScores = []
         victoriousCands, eliminatedCands = set(), set()
-        while(len(victoriousCands) < self.seatsAvailable and \
-              len(victoriousCands) + len(eliminatedCands) + 1 < numCandidates):
-            for cand in eliminatedCands:
-                candScoreMap[cand] -= 1
-            winners, losers = self.getWinLoseCandidates(candScoreMap, winningQuota)
-            loser = self.breakLoserTie(losers, deltaCandScores, profile)
+        while len(victoriousCands) < 1 and roundNum < numCandidates:
+            winners, losers = self.getWinLoseCandidates(rankMaps, rankMapCounts, rankingOffset, winningQuota)
+            # TODO: pick actual loser and work off of that
+            loser = list(losers)[0]
             victoriousCands = victoriousCands | winners
             eliminatedCands = eliminatedCands | {loser}
-            print('[round %d]'%roundNum,'prefMap:-',candPreferenceMap)
-            print('[round %d]'%roundNum,'scores:-',candScoreMap,'loser:-',loser,
-                  'w&l:-',victoriousCands, eliminatedCands)
-            self.reallocLoserVotes(candScoreMap, candPreferenceMap, rankingCount, \
-                                   rankingOffset,loser, \
-                                   victoriousCands | eliminatedCands, deltaCandScores)
+            # print('[round %d]'%roundNum,'prefMap:-',candPreferenceMap)
+            # print('[round %d]'%roundNum,'scores:-',candScoreMap,'loser:-',loser,
+            #       'w&l:-',victoriousCands, eliminatedCands)
+            rankingOffset = self.reallocLoserVotes(rankMaps, rankMapCounts, rankingOffset, loser)
             roundNum+= 1
         return candScoreMap
 
-class MechanismSTVForward(MechanismSTV):
-    """
-    The Single Transferable Vote Mechanism with Forward Tie Breaking.
-    """
+    def getWinLoseCandidates(self, rankMaps, rankMapCounts, rankingOffset, winningQuota):
+        candScores = {}
+        # calculate scores
+        for i in range(len(rankMaps)):
+            ranking = rankMaps[i]
+            offset = rankingOffset[i]
+            cands = ranking[offset]
+            for cand in cands:
+                if cand not in candScores:
+                    candScores[cand] = 0
+                candScores[cand] += rankMapCounts[offset]
 
-    def __init__(self):
-        self.maximizeCandScore = True
-        self.seatsAvailable = 1
+        # find winners and losers
+        winners = set()
+        losers = set()
+        minScore = min(candScores.values())
+        for cand in candScores:
+            score = candScores[cand]
+            if score >= winningQuota:
+                winners.add(cand)
+            if score == minScore:
+                losers.add(cand)
 
-    def breakLoserTie(self, losers, deltaCandScores, profile):
-        """
-        Returns one candidate to be eliminated by foward tie breaking.
+        return winners, losers
 
-        :rtype int loser: the candidate to be eliminated this round.
-
-        :ivar set<int> losers: A set of candidates who are tied for being eliminated.
-        :ivar list<dict<int,int>> deltaCandScores: A list of the score change for
-            each candidate each round. Candidates whose score did not change for a
-            round would not appear in the dictionary for that round.
-        :ivar Profile profile: A Profile object that represents an election profile.
-        """
-
-        curCandScores = self.getInitialCandMaps(profile)[0]
-        curRound = 0
-        while(len(losers)>1 and curRound < len(deltaCandScores)):
-            lowestScore = -1
-            newLosers = set()
-            for loser in losers:
-                score = curCandScores[loser]
-                if score < lowestScore or lowestScore == -1:
-                    lowestScore = score
-                    newLosers = {loser}
-                elif score == lowestScore:
-                    newLosers.add(loser)
-            losers = newLosers
-
-            for cand in losers:
-                if cand not in deltaCandScores[curRound]:
-                    continue
-                curCandScores[cand] += deltaCandScores[curRound][cand]
-            curRound += 1
-        return random.choice(list(losers))
-
-class MechanismSTVBackward(MechanismSTV):
-    """
-    The Single Transferable Vote Mechanism with Backwards Tie Breaking.
-    """
-
-    def __init__(self):
-        self.maximizeCandScore = True
-        self.seatsAvailable = 1
-
-    def breakLoserTie(self, losers, deltaCandScores, profile):
-        """
-        Returns one candidate to be eliminated by backwards tie breaking.
-
-        :rtype int loser: the candidate to be eliminated this round.
-
-        :ivar set<int> losers: A set of candidates who are tied for being eliminated.
-        :ivar list<dict<int,int>> deltaCandScores: A list of the score change for
-            each candidate each round. Candidates whose score did not change for a
-            round would not appear in the dictionary for that round.
-        :ivar Profile profile: A Profile object that represents an election profile.
-        """
-        curRound = len(deltaCandScores) - 1
-        while(len(losers) > 1 and curRound >= 0):
-            highestChange = -1
-            newLosers = set()
-            for loser in losers:
-                change = 0
-                if loser in deltaCandScores[curRound]:
-                    change = deltaCandScores[curRound][loser]
-                if change > highestChange or highestChange == -1:
-                    highestChange = change
-                    newLosers = {loser}
-                elif change == highestChange:
-                    newLosers.add(loser)
-            losers = newLosers
-            curRound -= 1
-        return random.choice(list(losers))
-
-class MechanismSTVPosTieBreak(MechanismSTV):
-    """
-    The Single Transferable Vote Mechanism with Positional Tie Breaking.
-    This is the parent class for several other mechanisms but can be constructed
-    directly.  The child classes are expected to implement the getScoringVector()
-    method.
-
-    :ivar list<int> scoringVector: A list of integers (or floats that give the scores assigned to
-    each position a ranking from first to last.
-    """
-
-    def __init__(self,scoringVector):
-        self.maximizeCandScore = True
-        self.seatsAvailable = 1
-        self.scoringVector = scoringVector
-
-    def getScoringVector(self,profile):
-        """
-        Returns the scoring vector. This function is called by breakLoserTie().
-
-        :ivar Profile profile: A Profile object that represents an election profile.
-        """
-        if len(self.scoringVector) != profile.numCands:
-            print("ERROR: scoring vector is not the correct length")
-            exit()
-        return self.scoringVector
-
-
-    def breakLoserTie(self, losers, deltaCandScores, profile):
-        """
-        Returns one candiate to be eliminated by positional tie breaking.
-
-        :rtype int loser: the candidate to be eliminated this round.
-
-        :ivar set<int> losers: A set of candidates who are tied for being eliminated.
-        :ivar list<dict<int,int>> deltaCandScores: A list of the score change for
-            each candidate each round. Candidates whose score did not change for a
-            round would not appear in the dictionary for that round.
-        :ivar Profile profile: A Profile object that represents an election profile.
-        """
-
-        # Initialize our dictionary so all candidate have a score of zero.
-        loserScoresMap = dict()
-        for loser in losers:
-            loserScoresMap[loser] = 0
-        rankMaps = profile.getRankMaps()
-        rankMapCounts = profile.getPreferenceCounts()
-        scoringVector = self.getScoringVector(profile)
-        # Go through the rankMaps of the profile and increment each candidates score appropriately
-        for i in range(0, len(rankMaps)):
-            rankMap = rankMaps[i]
-            rankMapCount = rankMapCounts[i]
-            for cand in rankMap.keys():
-                if cand in losers:
-                    loserScoresMap[cand] += scoringVector[rankMap[cand]-1]*rankMapCount
-        #get a starting value for the lowest score, store losers with that value
-        sampleLoser = losers.pop()
-        loserScore = loserScoresMap[sampleLoser]
-        actualLosers = set()
-        actualLosers.add(sampleLoser)
-        #find the lowest scored losers
-        for loser in losers:
-            currentScore = loserScoresMap[loser]
-            if currentScore < loserScore:
-                loserScore = currentScore
-                actualLosers.clear()
-                actualLosers.add(loser)
-            elif currentScore == loserScore:
-                actualLosers.add(loser)
-        return random.choice(list(actualLosers))
-
-class MechanismSTVBorda(MechanismSTVPosTieBreak):
-    """
-    The Single Transferable Vote with Borda tie breaking mechanism.
-    This inherits from the STV with positional tie breaking mechanism.
-    """
-
-    def __init__(self):
-        self.maximizeCandScore = True
-        self.seatsAvailable = 1
-
-    def getScoringVector(self, profile):
-        """
-        Echos the function of the same name from MechanismBorda.
-        Returns the scoring vector [m-1,m-2,m-3,...,0] where m is the number of candidates in the
-election profile. This function is called by breakLoserTie() which is implemented in the
-parent class.
-
-        :ivar Profile profile: A Profile object that represents an election profile.
-        """
-        scoringVector = []
-        score = profile.numCands-1
-        for i in range(0,profile.numCands):
-            scoringVector.append(score)
-            score -= 1
-        return scoringVector
-
-class MechanismSTVCoombs(MechanismSTVPosTieBreak):
-    """
-    The Single Transferable Vote with Coombs tie breaking mechanism.
-    This inherits from the STV with positional tie breaking mechanism.
-    """
-
-    def __init__(self):
-        self.maximizeCandScore = True
-        self.seatsAvailable = 1
-
-    def getScoringVector(self, profile):
-        """
-        Echos the function of the same name from MechanismVeto.
-        Returns the scoring vector [1,1,1,...,0]. This function is called by breakLoserTie()
-        which is implemented in the parent class.
-
-        :ivar Profile profile: a Profile object that represents an election profile.
-        """
-        numTiers = len(set(profile.getRankMaps()[0].values()))
-        scoringVector = []
-        for i in range(0, numTiers - 1):
-            scoringVector.append(1)
-        for i in range(numTiers - 1, profile.numCands):
-            scoringVector.append(0)
-        return scoringVector
+    def reallocLoserVotes(self, rankMaps, rankMapCounts, rankingOffset, loser):
+        newRankingOffset = [1 for i in rankingOffset]
+        for i in range(len(rankMaps)):
+            ranking = rankMaps[i]
+            offset = rankingOffset[i]
+            cands = ranking[offset]
+            if len(cands) > 1:
+                removeIndex = -1
+                for j in range(len(cands)):
+                    cand = cands[j]
+                    if cand == loser:
+                        removeIndex = j
+                        break
+                if removeIndex != -1:
+                    cands.pop(removeIndex)
+            elif cands[0] == loser:
+                newRankingOffset[i] = offset + 1
+        return newRankingOffset
