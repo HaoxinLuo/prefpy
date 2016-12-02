@@ -116,6 +116,7 @@ class MechanismSTV(Mechanism):
             exit()
 
         winningQuota = self.getWinningQuota(profile)
+        print("Winning quota is %d votes" % winningQuota)
         numCandidates = profile.numCands
         rankMaps, rankMapCounts = self.getInitialRankMaps(profile)
         # candScoreMap, candPreferenceMap, rankingCount, rankingOffset = self.getCandMaps(profile, rankMaps, rankMapCounts)
@@ -125,7 +126,7 @@ class MechanismSTV(Mechanism):
         victoriousCands = set()
         eliminatedCandsList = [set()]
         rankingOffsets = [rankingOffset]
-        while len(victoriousCands) < 1 and roundNum < numCandidates:
+        while roundNum < numCandidates:
             print("\n\nRound %d\t\t" % roundNum)
             newRankingOffsets = []
             newEliminatedCandsList = []
@@ -133,16 +134,16 @@ class MechanismSTV(Mechanism):
                 rankingOffset = rankingOffsets[i]
                 winners, losers = self.getWinLoseCandidates(rankMaps, rankMapCounts, rankingOffset, winningQuota)
                 victoriousCands = victoriousCands | winners
-                print("Winners: %s" % victoriousCands)
-                print("Eliminated so far: %s" % eliminatedCandsList[i])
+                print("\tWinners: %s" % victoriousCands)
+                print("\tEliminated so far: %s" % eliminatedCandsList[i])
 
                 if len(losers) > 1:
-                    print("%s are tied" % losers)
+                    print("\t\t%s are tied" % losers)
                 else:
-                    print("%s is loser" % losers)
+                    print("\t\t%s is loser" % losers)
                 for loser in losers:
                     newEliminatedCands = eliminatedCandsList[i] | {loser}
-                    print("Cands eliminated: %s" % newEliminatedCands)
+                    print("\t\tCands eliminated: %s" % newEliminatedCands)
                     nextRankingOffset = self.reallocLoserVotes(rankMaps, rankMapCounts, rankingOffset, loser, newEliminatedCands)
                     newEliminatedCandsList.append(newEliminatedCands)
                     newRankingOffsets.append(nextRankingOffset)
@@ -168,7 +169,7 @@ class MechanismSTV(Mechanism):
             for cand in cands:
                 if cand not in candScores:
                     candScores[cand] = 0
-                candScores[cand] += rankMapCounts[offset]
+                candScores[cand] += rankMapCounts[i]
         print(candScores)
         # find winners and losers
         winners = set()
@@ -184,7 +185,7 @@ class MechanismSTV(Mechanism):
         return winners, losers
 
     def reallocLoserVotes(self, rankMaps, rankMapCounts, rankingOffset, loser, eliminatedCands):
-        newRankingOffset = [1 for i in rankingOffset]
+        newRankingOffset = [i for i in rankingOffset]
         for i in range(len(rankMaps)):
             ranking = rankMaps[i]
             offset = rankingOffset[i]
