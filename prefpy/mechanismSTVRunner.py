@@ -46,6 +46,5 @@ if __name__ == "__main__":
     profile = electionFileToProfile(sys.argv[1])
 
     stv = mechanismSTV.MechanismSTV()
-    print("\n\n")
-    print(stv.getWinners(profile))
+    print("\n\nWinners: %s" % stv.getWinners(profile))
     print("\n" + "=" * 80)

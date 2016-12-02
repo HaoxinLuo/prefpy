@@ -122,18 +122,40 @@ class MechanismSTV(Mechanism):
         rankingOffset = [1 for i in rankMapCounts]
         roundNum = 0
 
-        victoriousCands, eliminatedCands = set(), set()
+        victoriousCands = set()
+        eliminatedCandsList = [set()]
+        rankingOffsets = [rankingOffset]
         while len(victoriousCands) < 1 and roundNum < numCandidates:
-            winners, losers = self.getWinLoseCandidates(rankMaps, rankMapCounts, rankingOffset, winningQuota)
-            # TODO: pick actual loser and work off of that
-            loser = list(losers)[0]
-            victoriousCands = victoriousCands | winners
-            eliminatedCands = eliminatedCands | {loser}
-            # print('[round %d]'%roundNum,'prefMap:-',candPreferenceMap)
-            # print('[round %d]'%roundNum,'scores:-',candScoreMap,'loser:-',loser,
-            #       'w&l:-',victoriousCands, eliminatedCands)
-            rankingOffset = self.reallocLoserVotes(rankMaps, rankMapCounts, rankingOffset, loser)
+            print("\n\nRound %d\t\t" % roundNum)
+            newRankingOffsets = []
+            newEliminatedCandsList = []
+            for i in range(len(rankingOffsets)):
+                rankingOffset = rankingOffsets[i]
+                winners, losers = self.getWinLoseCandidates(rankMaps, rankMapCounts, rankingOffset, winningQuota)
+                victoriousCands = victoriousCands | winners
+                print("Winners: %s" % victoriousCands)
+                print("Eliminated so far: %s" % eliminatedCandsList[i])
+
+                if len(losers) > 1:
+                    print("%s are tied" % losers)
+                else:
+                    print("%s is loser" % losers)
+                for loser in losers:
+                    newEliminatedCands = eliminatedCandsList[i] | {loser}
+                    print("Cands eliminated: %s" % newEliminatedCands)
+                    nextRankingOffset = self.reallocLoserVotes(rankMaps, rankMapCounts, rankingOffset, loser, newEliminatedCands)
+                    newEliminatedCandsList.append(newEliminatedCands)
+                    newRankingOffsets.append(nextRankingOffset)
+            rankingOffsets = newRankingOffsets
+            eliminatedCandsList = newEliminatedCandsList
             roundNum+= 1
+
+        candScoreMap = {}
+        for eliminatedCands in eliminatedCandsList:
+            for cand in eliminatedCands:
+                candScoreMap[cand] = 0
+        for cand in victoriousCands:
+            candScoreMap[cand] = 1
         return candScoreMap
 
     def getWinLoseCandidates(self, rankMaps, rankMapCounts, rankingOffset, winningQuota):
@@ -147,7 +169,7 @@ class MechanismSTV(Mechanism):
                 if cand not in candScores:
                     candScores[cand] = 0
                 candScores[cand] += rankMapCounts[offset]
-
+        print(candScores)
         # find winners and losers
         winners = set()
         losers = set()
@@ -161,21 +183,16 @@ class MechanismSTV(Mechanism):
 
         return winners, losers
 
-    def reallocLoserVotes(self, rankMaps, rankMapCounts, rankingOffset, loser):
+    def reallocLoserVotes(self, rankMaps, rankMapCounts, rankingOffset, loser, eliminatedCands):
         newRankingOffset = [1 for i in rankingOffset]
         for i in range(len(rankMaps)):
             ranking = rankMaps[i]
             offset = rankingOffset[i]
             cands = ranking[offset]
-            if len(cands) > 1:
-                removeIndex = -1
-                for j in range(len(cands)):
-                    cand = cands[j]
-                    if cand == loser:
-                        removeIndex = j
-                        break
-                if removeIndex != -1:
-                    cands.pop(removeIndex)
-            elif cands[0] == loser:
+            nonLoserCands = []
+            for cand in cands:
+                if cand not in eliminatedCands:
+                    nonLoserCands.append(cand)
+            if len(nonLoserCands) == 0:
                 newRankingOffset[i] = offset + 1
         return newRankingOffset
