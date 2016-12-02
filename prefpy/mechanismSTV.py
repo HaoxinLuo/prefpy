@@ -62,7 +62,7 @@ class MechanismSTV(Mechanism):
         rankMaps, rankMapCounts = self.getInitialRankMaps(profile)
 
         rankingOffset = [1 for i in rankMapCounts]
-        roundNum = 0
+        roundNum = 1
 
         victoriousCands = set()
         eliminatedCandsList = [set()]
@@ -143,9 +143,10 @@ class MechanismSTV(Mechanism):
         :ivar set<int> eliminatedCandidates: Set of candidates that have been eliminated
         """
         newRankingOffset = [i for i in rankingOffset]
-        for i in range(len(rankMaps)):
+        i = 0;
+        while i < len(rankMaps):
             ranking = rankMaps[i]
-            offset = rankingOffset[i]
+            offset = newRankingOffset[i]
             cands = ranking[offset]
             nonLoserCands = []
             for cand in cands:
@@ -153,4 +154,6 @@ class MechanismSTV(Mechanism):
                     nonLoserCands.append(cand)
             if len(nonLoserCands) == 0:
                 newRankingOffset[i] = offset + 1
+            else:
+                i += 1
         return newRankingOffset
