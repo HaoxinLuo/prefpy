@@ -25,65 +25,6 @@ class MechanismSTV(Mechanism):
 
         return (profile.numVoters / (self.seatsAvailable + 1)) + 1
 
-    def convRankingToTuple(self, ranking):
-        """
-        Returns a tuple of tuples that represents the ranking where the first inner
-        tuple contains candidates that are ranked number 1 in original ranking and
-        so on for each following inner tuple. e.g. {{4,}, {1,}, {3,}, {2,}} is a
-        ranking where candidates are ranked in the order 4 > 1 > 3 > 2.
-
-        :rtype tuple<tuple<int>>: will referred to as tupleRanking type.
-
-        :ivar dict<int,list<int>> ranking: A mapping of ranking position number to
-            list of candidates ranked at that position. e.g. {1:[2,3]} means
-            candidates 2 and 3 are both ranked number 1 in the ranking.
-        """
-
-        return tuple(tuple(ranking[k+1]) for k in range(0,len(ranking)))
-
-    def getCandMaps(self, profile, rankMaps, rankMapCounts):
-        """
-        Returns a multi-part representation of the election profile referenced by
-        profile.
-
-        .. note:: tupleRanking is equal to tuple<tuple<int>> as returned by
-            convRankingToTuple.
-        :rtype dict<int,int> candScoreMap: A mapping of each candidate to their
-            score, which starts out as the number of rankings with this candidate
-            ranked first, or 0 if no rankings start out supporting this canddiate.
-        :rtype dict<int,list<tupleRanking>> candPreferenceMap: A mapping of each
-            candidate to a list all rankings, represented as tuple of tuples, that
-            contribute to their score, which starts out empty.
-        :rtype dict<tupleRanking, int> rankingCount: A mapping of rankings in tuple
-            form to their corresponding count as given by profile.
-        :rtype dict<tupleRanking, int> rankingOffset: A mapping of rankings in tuple
-            form to the their own offset, which shows which candidate the ranking is
-            currently supporting. Each ranking starts off supporting its first ranked
-            candidate.
-
-        :ivar Profile profile: A Profile object that represents an election profile.
-        """
-
-        # initialize all cands to have 0 score and [] supporting rankings
-        allCands = list(profile.candMap.keys())
-        candScoreMap, candPreferenceMap = {},{}
-        for cand in allCands:
-            candScoreMap[cand] = 0
-            candPreferenceMap[cand] = []
-        rankingOffset = {}
-        rankingCount = {}
-
-        for ranking,count in zip(rankMaps,rankMapCounts):
-            tupleRanking = self.convRankingToTuple(ranking)
-            rankingCount[tupleRanking] = count
-            # find top ranked candidate and add to his score and supporint rankings
-            candScoreMap[tupleRanking[0][0]] += rankingCount[tupleRanking]
-            candPreferenceMap[tupleRanking[0][0]].append(tupleRanking)
-            if tupleRanking not in rankingOffset:
-                rankingOffset[tupleRanking] = 0
-
-        return candScoreMap, candPreferenceMap, rankingCount, rankingOffset
-
     def getInitialRankMaps(self, profile):
         """
         Returns a multi-part representation of the election profile referenced by
@@ -119,7 +60,7 @@ class MechanismSTV(Mechanism):
         print("Winning quota is %d votes" % winningQuota)
         numCandidates = profile.numCands
         rankMaps, rankMapCounts = self.getInitialRankMaps(profile)
-        # candScoreMap, candPreferenceMap, rankingCount, rankingOffset = self.getCandMaps(profile, rankMaps, rankMapCounts)
+
         rankingOffset = [1 for i in rankMapCounts]
         roundNum = 0
 
@@ -144,7 +85,7 @@ class MechanismSTV(Mechanism):
                 for loser in losers:
                     newEliminatedCands = eliminatedCandsList[i] | {loser}
                     print("\t\tCands eliminated: %s" % newEliminatedCands)
-                    nextRankingOffset = self.reallocLoserVotes(rankMaps, rankMapCounts, rankingOffset, loser, newEliminatedCands)
+                    nextRankingOffset = self.reallocLoserVotes(rankMaps, rankMapCounts, rankingOffset, newEliminatedCands)
                     newEliminatedCandsList.append(newEliminatedCands)
                     newRankingOffsets.append(nextRankingOffset)
             rankingOffsets = newRankingOffsets
@@ -160,6 +101,14 @@ class MechanismSTV(Mechanism):
         return candScoreMap
 
     def getWinLoseCandidates(self, rankMaps, rankMapCounts, rankingOffset, winningQuota):
+        """
+        Returns all candidates who have won by passing the winning quota and all who have tied for lowest score.
+
+        :ivar list<dict<int, list<int>>> rankMaps: List of rankings in dict form, where dict maps placement to list of candidates.
+        :ivar list<int> rankMapCounts: Count of votes in corresponding entry of rankMaps
+        :ivar list<int> rankingOffset: Index of top remaining candidate in corresponding entry of rankMaps
+        :ivar int winningQuota: minimum value needed to be winner
+        """
         candScores = {}
         # calculate scores
         for i in range(len(rankMaps)):
@@ -184,7 +133,15 @@ class MechanismSTV(Mechanism):
 
         return winners, losers
 
-    def reallocLoserVotes(self, rankMaps, rankMapCounts, rankingOffset, loser, eliminatedCands):
+    def reallocLoserVotes(self, rankMaps, rankMapCounts, rankingOffset, eliminatedCands):
+        """
+        Makes new rankingOffset based on who has been eliminated.
+
+        :ivar list<dict<int, list<int>>> rankMaps: List of rankings in dict form, where dict maps placement to list of candidates.
+        :ivar list<int> rankMapCounts: Count of votes in corresponding entry of rankMaps
+        :ivar list<int> rankingOffset: Index of top remaining candidate in corresponding entry of rankMaps
+        :ivar set<int> eliminatedCandidates: Set of candidates that have been eliminated
+        """
         newRankingOffset = [i for i in rankingOffset]
         for i in range(len(rankMaps)):
             ranking = rankMaps[i]
