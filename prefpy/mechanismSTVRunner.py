@@ -45,21 +45,34 @@ if __name__ == "__main__":
         exit()
     profile = electionFileToProfile(sys.argv[1])
 
+    import time
+    
     stv = mechanismSTV.MechanismSTVForward()
+    t0 = time.time()
     print("\n\n")
     print("Using STV with forward tie breaking")
     print(stv.getWinners(profile))
+    print("Took %fs" % (time.time() - t0))
     print("\n" + "=" * 80)
+    
+    t0 = time.time()
     stv = mechanismSTV.MechanismSTVBackward()
     print("Using STV with backward tie breaking")
     print(stv.getWinners(profile))
+    print("Took %fs" % (time.time() - t0))
     print("\n" + "=" * 80)
+    
+    t0 = time.time()
     stv = mechanismSTV.MechanismSTVBorda()
     print("Using STV with Borda tie breaking")
     print(stv.getWinners(profile))
+    print("Took %fs" % (time.time() - t0))
     print("\n" + "=" * 80)
+    
+    t0 = time.time()
     stv = mechanismSTV.MechanismSTVCoombs()
     print("Using STV with Coombs tie breaking")
     print(stv.getWinners(profile))
+    print("Took %fs" % (time.time() - t0))
     print("\n" + "=" * 80)
     print("\n\n")
