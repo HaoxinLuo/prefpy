@@ -77,6 +77,8 @@ class MechanismSTV(Mechanism):
                 victoriousCands = victoriousCands | winners
                 print("\tWinners: %s" % victoriousCands)
                 print("\tEliminated so far: %s" % eliminatedCandsList[i])
+                if len(winners) > 0:
+                    continue
 
                 if len(losers) > 1:
                     print("\t\t%s are tied" % losers)
