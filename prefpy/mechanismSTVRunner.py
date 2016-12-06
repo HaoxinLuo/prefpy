@@ -49,8 +49,9 @@ if __name__ == "__main__":
 
     t0 = time.time()
     stv = mechanismSTV.MechanismSTV()
+    winners = stv.getWinners(profile)
     t = (time.time() - t0) * 1000000
-    print("\n\nWinners: %s" % stv.getWinners(profile))
+    print("\n\nWinners: %s" % winners)
     print("Took %.1fus" % t)
     print("\n" + "=" * 80)
     outfile = open("tests.csv","a")
