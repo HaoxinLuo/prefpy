@@ -192,9 +192,9 @@ class MechanismSTV(Mechanism):
             loser = self.breakLoserTie(losers, deltaCandScores, profile)
             victoriousCands = victoriousCands | winners
             eliminatedCands = eliminatedCands | {loser}
-            print('[round %d]'%roundNum,'prefMap:-',candPreferenceMap)
-            print('[round %d]'%roundNum,'scores:-',candScoreMap,'loser:-',loser,
-                  'w&l:-',victoriousCands, eliminatedCands)
+            #print('[round %d]'%roundNum,'prefMap:-',candPreferenceMap)
+            #print('[round %d]'%roundNum,'scores:-',candScoreMap,'loser:-',loser,
+            #      'w&l:-',victoriousCands, eliminatedCands)
             self.reallocLoserVotes(candScoreMap, candPreferenceMap, rankingCount, \
                                    rankingOffset,loser, \
                                    victoriousCands | eliminatedCands, deltaCandScores)
