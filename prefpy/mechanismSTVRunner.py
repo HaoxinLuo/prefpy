@@ -45,6 +45,14 @@ if __name__ == "__main__":
         exit()
     profile = electionFileToProfile(sys.argv[1])
 
+    import time
+
+    t0 = time.time()
     stv = mechanismSTV.MechanismSTV()
+    t = (time.time() - t0) * 1000000
     print("\n\nWinners: %s" % stv.getWinners(profile))
+    print("Took %.1fus" % t)
     print("\n" + "=" * 80)
+    outfile = open("tests.csv","a")
+    outfile.write("%.1f\n" % t)
+    outfile.close()
