@@ -47,32 +47,45 @@ if __name__ == "__main__":
 
     import time
     
-    stv = mechanismSTV.MechanismSTVForward()
+
     t0 = time.time()
+    stv = mechanismSTV.MechanismSTVForward()
+    winners = stv.getWinners(profile)
+    t1 = (time.time() - t0) * 1000000.0
     print("\n\n")
     print("Using STV with forward tie breaking")
     print(stv.getWinners(profile))
-    print("Took %fs" % (time.time() - t0))
+    print("Took %.1fus" % t1)
     print("\n" + "=" * 80)
     
     t0 = time.time()
     stv = mechanismSTV.MechanismSTVBackward()
+    winners = stv.getWinners(profile)
+    t2 = (time.time() - t0) * 1000000.0
     print("Using STV with backward tie breaking")
     print(stv.getWinners(profile))
-    print("Took %fs" % (time.time() - t0))
+    print("Took %.1fus" % t2)
     print("\n" + "=" * 80)
     
     t0 = time.time()
     stv = mechanismSTV.MechanismSTVBorda()
+    winners = stv.getWinners(profile)
+    t3 = (time.time() - t0) * 1000000.0
     print("Using STV with Borda tie breaking")
     print(stv.getWinners(profile))
-    print("Took %fs" % (time.time() - t0))
+    print("Took %.1fus" % t3)
     print("\n" + "=" * 80)
     
     t0 = time.time()
     stv = mechanismSTV.MechanismSTVCoombs()
+    winners = stv.getWinners(profile)
+    t4 = (time.time() - t0) * 1000000.0
     print("Using STV with Coombs tie breaking")
     print(stv.getWinners(profile))
-    print("Took %fs" % (time.time() - t0))
+    print("Took %.1fus" % t4)
     print("\n" + "=" * 80)
     print("\n\n")
+
+    outfile = open("test.csv","a")
+    outfile.write("%.1f,%.1f,%.1f,%.1f\n" % (t1,t2,t3,t4))
+    outfile.close()
