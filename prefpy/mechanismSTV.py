@@ -93,11 +93,14 @@ class MechanismSTV(Mechanism):
             rankingOffsets = newRankingOffsets
             eliminatedCandsList = newEliminatedCandsList
             roundNum+= 1
+        allCands = set(profile.candMap.keys())
 
         candScoreMap = {}
         for eliminatedCands in eliminatedCandsList:
             for cand in eliminatedCands:
                 candScoreMap[cand] = 0
+            # Add candidates remaining in last round as victorious
+            victoriousCands = victoriousCands | (allCands - eliminatedCands)
         for cand in victoriousCands:
             candScoreMap[cand] = 1
         return candScoreMap
