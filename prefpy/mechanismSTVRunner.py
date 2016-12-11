@@ -45,8 +45,7 @@ if __name__ == "__main__":
         exit()
     profile = electionFileToProfile(sys.argv[1])
 
-    import time
-    
+    import time    
 
     t0 = time.time()
     stv = mechanismSTV.MechanismSTVForward()
@@ -54,7 +53,7 @@ if __name__ == "__main__":
     t1 = (time.time() - t0) * 1000000.0
     print("\n\n")
     print("Using STV with forward tie breaking")
-    print(stv.getWinners(profile))
+    print(winners)
     print("Took %.1fus" % t1)
     print("\n" + "=" * 80)
     
@@ -63,7 +62,7 @@ if __name__ == "__main__":
     winners = stv.getWinners(profile)
     t2 = (time.time() - t0) * 1000000.0
     print("Using STV with backward tie breaking")
-    print(stv.getWinners(profile))
+    print(winners)
     print("Took %.1fus" % t2)
     print("\n" + "=" * 80)
     
@@ -72,7 +71,7 @@ if __name__ == "__main__":
     winners = stv.getWinners(profile)
     t3 = (time.time() - t0) * 1000000.0
     print("Using STV with Borda tie breaking")
-    print(stv.getWinners(profile))
+    print(winners)
     print("Took %.1fus" % t3)
     print("\n" + "=" * 80)
     
@@ -81,11 +80,16 @@ if __name__ == "__main__":
     winners = stv.getWinners(profile)
     t4 = (time.time() - t0) * 1000000.0
     print("Using STV with Coombs tie breaking")
-    print(stv.getWinners(profile))
+    print(winners)
     print("Took %.1fus" % t4)
     print("\n" + "=" * 80)
-    print("\n\n")
 
-    outfile = open("test.csv","a")
-    outfile.write("%.1f,%.1f,%.1f,%.1f\n" % (t1,t2,t3,t4))
-    outfile.close()
+    t0 = time.time()
+    stv = mechanismSTV.MechanismSTVAll()
+    winners = stv.getWinners(profile)
+    t5 = (time.time() - t0) * 1000000.0
+    print("Using STV - All possible winners")
+    print(winners)
+    print("Took %.1fus" % t5)
+    print("\n" + "=" * 80)
+    print("\n\n")
